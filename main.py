@@ -3,6 +3,7 @@ import noise
 import numpy as np
 import pickle
 import os
+import time
 from config import WIDTH, HEIGHT, TILE_SIZE, SCALE, OCTAVES, PERSISTENCE, LACUNARITY, WATER_COLOR, SAND_COLOR, GRASS_COLOR, CACHE_FILE
 
 # 加载缓存数据
@@ -15,6 +16,16 @@ else:
 highlighted_tile = None
 clicked_tile = None
 flash_counter = 0
+
+# 玩家角色
+player_pos = [0, 0]  # 玩家角色的初始位置
+PLAYER_COLOR = (139, 0, 0)
+
+# 游戏时间
+game_time = 0  # 游戏时间，以小时为单位
+real_time_per_game_hour = 30  # 每小时等于实际时间30秒
+last_time = time.time()
+paused = False
 
 # 生成噪波地图数据
 def generate_noise_tile(x_offset, y_offset, tile_size):
@@ -50,7 +61,7 @@ def get_color(value):
         return WATER_COLOR
     elif value < 0.0:
         return SAND_COLOR
-    elif value < 0.5:
+    else:
         return GRASS_COLOR
 
 def increase_brightness(color, factor=1.2):
@@ -73,6 +84,11 @@ def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset):
                     color = increase_brightness(color, factor=1.5)
             
             pygame.draw.rect(screen, color, tile_rect)
+
+    # 绘制玩家角色
+    player_screen_x = (player_pos[0] - x_offset) * TILE_SIZE + TILE_SIZE // 2
+    player_screen_y = (player_pos[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
+    pygame.draw.circle(screen, PLAYER_COLOR, (player_screen_x, player_screen_y), TILE_SIZE // 2)
 
 # 初始化Pygame
 pygame.init()
@@ -99,6 +115,9 @@ while running:
             tile_y = mouse_y // TILE_SIZE + y_offset
             clicked_tile = (tile_x, tile_y)
             flash_counter = 0
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                paused = not paused
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
@@ -109,9 +128,33 @@ while running:
         x_offset -= 1
     if keys[pygame.K_d]:
         x_offset += 1
+    if keys[pygame.K_UP]:
+        player_pos[1] -= 1
+    if keys[pygame.K_DOWN]:
+        player_pos[1] += 1
+    if keys[pygame.K_LEFT]:
+        player_pos[0] -= 1
+    if keys[pygame.K_RIGHT]:
+        player_pos[0] += 1
+
+    # 更新游戏时间
+    if not paused:
+        current_time = time.time()
+        elapsed_time = current_time - last_time
+        game_time += elapsed_time / real_time_per_game_hour
+        last_time = current_time
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
     draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE, x_offset, y_offset)
+
+    # 绘制时间和暂停/继续状态
+    font = pygame.font.Font(None, 36)
+    time_text = font.render(f'Time: {int(game_time)}h', True, (255, 255, 255))
+    screen.blit(time_text, (10, 10))
+
+    if paused:
+        pause_text = font.render('Paused', True, (255, 0, 0))
+        screen.blit(pause_text, (WIDTH - 100, 10))
 
     pygame.display.flip()
     clock.tick(30)
