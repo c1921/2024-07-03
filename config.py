@@ -13,8 +13,8 @@ MOUNTAIN_COLOR = (139, 137, 137)
 SNOW_COLOR = (255, 250, 250)
 INFO_COLOR = (0, 74, 105)
 TEXT_COLOR = (209, 209, 209)
-HIGHLIGHT_COLOR = (255, 255, 0)
-PLAYER_COLOR = (255, 0, 0)
+HIGHLIGHT_COLOR = (255, 255, 0, 128)  # 半透明黄色
+FLASH_COLOR = (255, 0, 0, 128)  # 半透明红色
 
 
 # 噪波参数
@@ -31,3 +31,6 @@ CACHE_FILE = 'tile_cache.pkl'
 
 # 字体大小
 FONT_SIZE = 24
+
+# 闪烁间隔
+FLASH_INTERVAL = 1500

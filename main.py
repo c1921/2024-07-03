@@ -81,6 +81,14 @@ font = pygame.font.SysFont(None, FONT_SIZE)
 
 # 显示的信息
 selected_tile_coords = None
+highlighted_tile_coords = None
+flash_timer = 0
+
+# 半透明颜色
+highlight_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+highlight_surface.fill(HIGHLIGHT_COLOR)
+flash_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+flash_surface.fill(FLASH_COLOR)
 
 # 游戏循环
 while True:
@@ -126,6 +134,22 @@ while True:
             screen_y = (y - start_y) * TILE_SIZE - (player_y % TILE_SIZE)
             screen.blit(surface, (screen_x, screen_y))
 
+            # 绘制高亮
+            if (x, y) == selected_tile_coords:
+                if flash_timer % FLASH_INTERVAL < FLASH_INTERVAL // 2:
+                    screen.blit(flash_surface, (screen_x, screen_y))
+            elif (x, y) == highlighted_tile_coords:
+                screen.blit(highlight_surface, (screen_x, screen_y))
+
+    # 更新高亮块
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    if mouse_y < SCREEN_HEIGHT:
+        highlight_x = (player_x - SCREEN_WIDTH // 2 + mouse_x) // TILE_SIZE
+        highlight_y = (player_y - SCREEN_HEIGHT // 2 + mouse_y) // TILE_SIZE
+        highlighted_tile_coords = (highlight_x, highlight_y)
+    else:
+        highlighted_tile_coords = None
+
     # 绘制底部信息栏
     pygame.draw.rect(screen, INFO_COLOR, (0, SCREEN_HEIGHT, SCREEN_WIDTH, INFO_HEIGHT))
     if selected_tile_coords:
@@ -135,3 +159,4 @@ while True:
 
     # 更新显示
     pygame.display.flip()
+    flash_timer += 1
