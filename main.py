@@ -12,6 +12,10 @@ if os.path.exists(CACHE_FILE):
 else:
     tile_cache = {}
 
+highlighted_tile = None
+clicked_tile = None
+flash_counter = 0
+
 # 生成噪波地图数据
 def generate_noise_tile(x_offset, y_offset, tile_size):
     noise_tile = np.zeros((tile_size, tile_size))
@@ -48,14 +52,27 @@ def get_color(value):
         return SAND_COLOR
     elif value < 0.5:
         return GRASS_COLOR
-    else:
-        return (139, 69, 19)  # Mountain color
 
-def draw_noise_map(screen, noise_tile, tile_size):
+def increase_brightness(color, factor=1.2):
+    return tuple(min(int(c * factor), 255) for c in color)
+
+def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset):
+    global flash_counter
     for x in range(tile_size):
         for y in range(tile_size):
+            abs_x = x + x_offset
+            abs_y = y + y_offset
             color = get_color(noise_tile[x][y])
-            pygame.draw.rect(screen, color, (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+            tile_rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+            if highlighted_tile == (abs_x, abs_y):
+                color = increase_brightness(color)
+
+            if clicked_tile == (abs_x, abs_y):
+                if flash_counter % 30 < 15:
+                    color = increase_brightness(color, factor=1.5)
+            
+            pygame.draw.rect(screen, color, tile_rect)
 
 # 初始化Pygame
 pygame.init()
@@ -71,6 +88,17 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.MOUSEMOTION:
+            mouse_x, mouse_y = event.pos
+            tile_x = mouse_x // TILE_SIZE + x_offset
+            tile_y = mouse_y // TILE_SIZE + y_offset
+            highlighted_tile = (tile_x, tile_y)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_x, mouse_y = event.pos
+            tile_x = mouse_x // TILE_SIZE + x_offset
+            tile_y = mouse_y // TILE_SIZE + y_offset
+            clicked_tile = (tile_x, tile_y)
+            flash_counter = 0
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
@@ -83,10 +111,11 @@ while running:
         x_offset += 1
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
-    draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE)
+    draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE, x_offset, y_offset)
 
     pygame.display.flip()
     clock.tick(30)
+    flash_counter += 1
 
 # 保存缓存数据
 with open(CACHE_FILE, 'wb') as f:
