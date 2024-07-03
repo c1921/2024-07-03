@@ -9,8 +9,9 @@ from config import *
 # 初始化Pygame
 pygame.init()
 
-# 设置屏幕大小
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT + INFO_HEIGHT))
+# 设置虚拟屏幕和实际窗口大小
+virtual_screen = pygame.Surface((VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT + INFO_HEIGHT))
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT + int(INFO_HEIGHT * WINDOW_SCALE)))
 pygame.display.set_caption('Infinite Map with Tile Coordinates Display')
 
 # 缓存已生成的块
@@ -72,8 +73,12 @@ def get_surface(x, y):
     return surface_cache[(x, y)]
 
 # 玩家初始位置 (0, 0) 坐标
-player_x, player_y = 0, 0
-player_speed = 5
+player_pos = [0, 0]
+player_speed = 1
+
+# 摄像机初始位置
+camera_x, camera_y = 0, 0
+camera_speed = 5
 
 # 初始化字体
 pygame.font.init()
@@ -90,6 +95,12 @@ highlight_surface.fill(HIGHLIGHT_COLOR)
 flash_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
 flash_surface.fill(FLASH_COLOR)
 
+# 按钮区域
+button_up = pygame.Rect(720, 610, 50, 20)
+button_down = pygame.Rect(720, 640, 50, 20)
+button_left = pygame.Rect(680, 625, 50, 20)
+button_right = pygame.Rect(760, 625, 50, 20)
+
 # 游戏循环
 while True:
     for event in pygame.event.get():
@@ -101,61 +112,93 @@ while True:
             sys.exit()
         if event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = event.pos
-            if mouse_y < SCREEN_HEIGHT:
-                tile_x = (player_x - SCREEN_WIDTH // 2 + mouse_x) // TILE_SIZE
-                tile_y = (player_y - SCREEN_HEIGHT // 2 + mouse_y) // TILE_SIZE
+            mouse_x = int(mouse_x / WINDOW_SCALE)
+            mouse_y = int(mouse_y / WINDOW_SCALE)
+            if mouse_y < VIRTUAL_SCREEN_HEIGHT:
+                tile_x = (camera_x - VIRTUAL_SCREEN_WIDTH // 2 + mouse_x) // TILE_SIZE
+                tile_y = (camera_y - VIRTUAL_SCREEN_HEIGHT // 2 + mouse_y) // TILE_SIZE
                 selected_tile_coords = (tile_x, tile_y)
+            else:
+                if button_up.collidepoint(mouse_x, mouse_y):
+                    player_pos[1] -= player_speed
+                elif button_down.collidepoint(mouse_x, mouse_y):
+                    player_pos[1] += player_speed
+                elif button_left.collidepoint(mouse_x, mouse_y):
+                    player_pos[0] -= player_speed
+                elif button_right.collidepoint(mouse_x, mouse_y):
+                    player_pos[0] += player_speed
 
     # 处理键盘输入
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
-        player_y -= player_speed
+        camera_y -= camera_speed
     if keys[pygame.K_s]:
-        player_y += player_speed
+        camera_y += camera_speed
     if keys[pygame.K_a]:
-        player_x -= player_speed
+        camera_x -= camera_speed
     if keys[pygame.K_d]:
-        player_x += player_speed
+        camera_x += camera_speed
 
-    # 计算玩家所在的块
-    player_tile_x = player_x // TILE_SIZE
-    player_tile_y = player_y // TILE_SIZE
+    # 计算摄像机所在的块
+    camera_tile_x = camera_x // TILE_SIZE
+    camera_tile_y = camera_y // TILE_SIZE
 
     # 清屏
-    screen.fill((0, 0, 0))
+    virtual_screen.fill((0, 0, 0))
 
     # 绘制当前视野内的地图块
-    start_x = player_tile_x - SCREEN_WIDTH // TILE_SIZE // 2
-    start_y = player_tile_y - SCREEN_HEIGHT // TILE_SIZE // 2
-    for x in range(start_x, start_x + SCREEN_WIDTH // TILE_SIZE + 1):
-        for y in range(start_y, start_y + SCREEN_HEIGHT // TILE_SIZE + 1):
+    start_x = camera_tile_x - VIRTUAL_SCREEN_WIDTH // TILE_SIZE // 2
+    start_y = camera_tile_y - VIRTUAL_SCREEN_HEIGHT // TILE_SIZE // 2
+    for x in range(start_x, start_x + VIRTUAL_SCREEN_WIDTH // TILE_SIZE + 1):
+        for y in range(start_y, start_y + VIRTUAL_SCREEN_HEIGHT // TILE_SIZE + 1):
             surface = get_surface(x, y)
-            screen_x = (x - start_x) * TILE_SIZE - (player_x % TILE_SIZE)
-            screen_y = (y - start_y) * TILE_SIZE - (player_y % TILE_SIZE)
-            screen.blit(surface, (screen_x, screen_y))
+            screen_x = (x - start_x) * TILE_SIZE - (camera_x % TILE_SIZE)
+            screen_y = (y - start_y) * TILE_SIZE - (camera_y % TILE_SIZE)
+            virtual_screen.blit(surface, (screen_x, screen_y))
 
             # 绘制高亮
             if (x, y) == selected_tile_coords:
                 if flash_timer % FLASH_INTERVAL < FLASH_INTERVAL // 2:
-                    screen.blit(flash_surface, (screen_x, screen_y))
+                    virtual_screen.blit(flash_surface, (screen_x, screen_y))
             elif (x, y) == highlighted_tile_coords:
-                screen.blit(highlight_surface, (screen_x, screen_y))
+                virtual_screen.blit(highlight_surface, (screen_x, screen_y))
+
+    # 绘制玩家
+    player_screen_x = (player_pos[0] * TILE_SIZE) - camera_x + VIRTUAL_SCREEN_WIDTH // 2
+    player_screen_y = (player_pos[1] * TILE_SIZE) - camera_y + VIRTUAL_SCREEN_HEIGHT // 2
+    pygame.draw.circle(virtual_screen, PLAYER_COLOR, (player_screen_x, player_screen_y), TILE_SIZE // 2)
 
     # 更新高亮块
     mouse_x, mouse_y = pygame.mouse.get_pos()
-    if mouse_y < SCREEN_HEIGHT:
-        highlight_x = (player_x - SCREEN_WIDTH // 2 + mouse_x) // TILE_SIZE
-        highlight_y = (player_y - SCREEN_HEIGHT // 2 + mouse_y) // TILE_SIZE
+    mouse_x = int(mouse_x / WINDOW_SCALE)
+    mouse_y = int(mouse_y / WINDOW_SCALE)
+    if mouse_y < VIRTUAL_SCREEN_HEIGHT:
+        highlight_x = (camera_x - VIRTUAL_SCREEN_WIDTH // 2 + mouse_x) // TILE_SIZE
+        highlight_y = (camera_y - VIRTUAL_SCREEN_HEIGHT // 2 + mouse_y) // TILE_SIZE
         highlighted_tile_coords = (highlight_x, highlight_y)
     else:
         highlighted_tile_coords = None
 
     # 绘制底部信息栏
-    pygame.draw.rect(screen, INFO_COLOR, (0, SCREEN_HEIGHT, SCREEN_WIDTH, INFO_HEIGHT))
+    pygame.draw.rect(virtual_screen, INFO_COLOR, (0, VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH, INFO_HEIGHT))
     if selected_tile_coords:
         info_text = f'Tile Coordinates: {selected_tile_coords}'
         text_surface = font.render(info_text, True, TEXT_COLOR)
-        screen.blit(text_surface, (10, SCREEN_HEIGHT + 5))
+        virtual_screen.blit(text_surface, (10, VIRTUAL_SCREEN_HEIGHT + 5))
+
+    # 绘制按钮
+    pygame.draw.rect(virtual_screen, (200, 200, 200), button_up)
+    pygame.draw.rect(virtual_screen, (200, 200, 200), button_down)
+    pygame.draw.rect(virtual_screen, (200, 200, 200), button_left)
+    pygame.draw.rect(virtual_screen, (200, 200, 200), button_right)
+    virtual_screen.blit(font.render("Up", True, TEXT_COLOR), (button_up.x + 10, button_up.y + 2))
+    virtual_screen.blit(font.render("Down", True, TEXT_COLOR), (button_down.x + 2, button_down.y + 2))
+    virtual_screen.blit(font.render("Left", True, TEXT_COLOR), (button_left.x + 2, button_left.y + 2))
+    virtual_screen.blit(font.render("Right", True, TEXT_COLOR), (button_right.x + 2, button_right.y + 2))
+
+    # 将虚拟屏幕缩放并绘制到实际窗口
+    scaled_screen = pygame.transform.scale(virtual_screen, (SCREEN_WIDTH, SCREEN_HEIGHT + int(INFO_HEIGHT * WINDOW_SCALE)))
+    screen.blit(scaled_screen, (0, 0))
 
     # 更新显示
     pygame.display.flip()
