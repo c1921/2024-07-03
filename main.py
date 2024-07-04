@@ -15,11 +15,14 @@ else:
 
 highlighted_tile = None
 clicked_tile = None
+marked_tiles = []
 flash_counter = 0
 
 # 玩家角色
 player_pos = [0, 0]  # 玩家角色的初始位置
 PLAYER_COLOR = (139, 0, 0)
+target_pos = None  # 玩家角色目标位置
+move_speed = 5  # 玩家每小时移动5个地块
 
 # 游戏时间
 game_time = 0  # 游戏时间，以小时为单位
@@ -90,6 +93,14 @@ def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset):
     player_screen_y = (player_pos[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
     pygame.draw.circle(screen, PLAYER_COLOR, (player_screen_x, player_screen_y), TILE_SIZE // 2)
 
+    # 绘制标记
+    for mark in marked_tiles:
+        mark_screen_x = (mark[0] - x_offset) * TILE_SIZE + TILE_SIZE // 2
+        mark_screen_y = (mark[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
+        pygame.draw.polygon(screen, (255, 0, 0), [(mark_screen_x, mark_screen_y - 10), 
+                                                  (mark_screen_x - 10, mark_screen_y + 10), 
+                                                  (mark_screen_x + 10, mark_screen_y + 10)])
+
 # 初始化Pygame
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -99,6 +110,21 @@ clock = pygame.time.Clock()
 
 x_offset, y_offset = 0, 0
 running = True
+
+def move_player_towards_target(elapsed_time):
+    global player_pos, target_pos
+    if target_pos:
+        dx = target_pos[0] - player_pos[0]
+        dy = target_pos[1] - player_pos[1]
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+        move_distance = move_speed * (elapsed_time / real_time_per_game_hour)
+        if distance <= move_distance:
+            player_pos = list(target_pos)
+            target_pos = None
+        else:
+            angle = np.arctan2(dy, dx)
+            player_pos[0] += move_distance * np.cos(angle)
+            player_pos[1] += move_distance * np.sin(angle)
 
 while running:
     for event in pygame.event.get():
@@ -110,11 +136,37 @@ while running:
             tile_y = mouse_y // TILE_SIZE + y_offset
             highlighted_tile = (tile_x, tile_y)
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            mouse_x, mouse_y = event.pos
-            tile_x = mouse_x // TILE_SIZE + x_offset
-            tile_y = mouse_y // TILE_SIZE + y_offset
-            clicked_tile = (tile_x, tile_y)
-            flash_counter = 0
+            if event.button == 3:  # 右键点击
+                mouse_x, mouse_y = event.pos
+                tile_x = mouse_x // TILE_SIZE + x_offset
+                tile_y = mouse_y // TILE_SIZE + y_offset
+                menu = pygame.Rect(mouse_x, mouse_y, 100, 60)
+                pygame.draw.rect(screen, (200, 200, 200), menu)
+                pygame.draw.rect(screen, (0, 0, 0), menu, 2)
+                font = pygame.font.Font(None, 24)
+                mark_text = font.render('Mark', True, (0, 0, 0))
+                move_text = font.render('Move', True, (0, 0, 0))
+                screen.blit(mark_text, (mouse_x + 10, mouse_y + 10))
+                screen.blit(move_text, (mouse_x + 10, mouse_y + 40))
+                pygame.display.flip()
+                selecting = True
+                while selecting:
+                    for sub_event in pygame.event.get():
+                        if sub_event.type == pygame.QUIT:
+                            running = False
+                            selecting = False
+                        elif sub_event.type == pygame.MOUSEBUTTONDOWN:
+                            if menu.collidepoint(sub_event.pos):
+                                if sub_event.pos[1] < mouse_y + 30:
+                                    marked_tiles.append((tile_x, tile_y))
+                                else:
+                                    target_pos = (tile_x, tile_y)
+                            selecting = False
+                        elif sub_event.type == pygame.KEYDOWN:
+                            if sub_event.key == pygame.K_SPACE:
+                                paused = not paused
+                            selecting = False
+
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 paused = not paused
@@ -128,14 +180,6 @@ while running:
         x_offset -= 1
     if keys[pygame.K_d]:
         x_offset += 1
-    if keys[pygame.K_UP]:
-        player_pos[1] -= 1
-    if keys[pygame.K_DOWN]:
-        player_pos[1] += 1
-    if keys[pygame.K_LEFT]:
-        player_pos[0] -= 1
-    if keys[pygame.K_RIGHT]:
-        player_pos[0] += 1
 
     # 更新游戏时间
     if not paused:
@@ -143,6 +187,7 @@ while running:
         elapsed_time = current_time - last_time
         game_time += elapsed_time / real_time_per_game_hour
         last_time = current_time
+        move_player_towards_target(elapsed_time)
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
     draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE, x_offset, y_offset)
