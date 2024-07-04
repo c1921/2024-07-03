@@ -8,7 +8,7 @@ flash_counter = 0
 
 # 玩家角色
 player_pos = [0, 0]  # 玩家角色的初始位置
-move_speed = 5  # 玩家每小时移动5个地块
+move_speed = 50  # 玩家每小时移动5个地块
 
 # 游戏时间
 game_time = 0  # 游戏时间，以小时为单位
@@ -98,6 +98,13 @@ while running:
     if paused:
         pause_text = font.render('Paused', True, (255, 0, 0))
         screen.blit(pause_text, (WIDTH - 100, 10))  # 显示暂停状态
+
+    # 绘制坐标信息
+    coord_font = pygame.font.Font(None, 28)
+    player_coord_text = coord_font.render(f'Player: ({player_pos[0]:.1f}, {player_pos[1]:.1f})', True, (255, 255, 255))
+    mouse_coord_text = coord_font.render(f'Mouse: {highlighted_tile}', True, (255, 255, 255))
+    screen.blit(player_coord_text, (10, HEIGHT - 30))  # 显示玩家坐标
+    screen.blit(mouse_coord_text, (WIDTH - 200, HEIGHT - 30))  # 显示鼠标悬浮地块的坐标
 
     pygame.display.flip()  # 更新屏幕显示
     clock.tick(30)  # 控制帧率
