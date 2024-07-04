@@ -15,6 +15,7 @@ else:
 highlighted_tile = None
 clicked_tile = None
 marked_tiles = []
+target_pos = None  # 玩家角色目标位置
 
 # 生成噪波地图数据
 def generate_noise_tile(x_offset, y_offset, tile_size):
@@ -56,7 +57,7 @@ def get_color(value):
 def increase_brightness(color, factor=1.2):
     return tuple(min(int(c * factor), 255) for c in color)
 
-def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset, flash_counter, player_pos, highlighted_tile, clicked_tile, marked_tiles):
+def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset, flash_counter, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos):
     for x in range(tile_size):
         for y in range(tile_size):
             abs_x = x + x_offset
@@ -85,6 +86,13 @@ def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset, flash_coun
         pygame.draw.polygon(screen, (255, 0, 0), [(mark_screen_x, mark_screen_y - 10), 
                                                   (mark_screen_x - 10, mark_screen_y + 10), 
                                                   (mark_screen_x + 10, mark_screen_y + 10)])
+
+    # 绘制目标十字标志
+    if target_pos:
+        target_screen_x = (target_pos[0] - x_offset) * TILE_SIZE + TILE_SIZE // 2
+        target_screen_y = (target_pos[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
+        pygame.draw.line(screen, (255, 0, 0), (target_screen_x - 10, target_screen_y), (target_screen_x + 10, target_screen_y), 2)
+        pygame.draw.line(screen, (255, 0, 0), (target_screen_x, target_screen_y - 10), (target_screen_x, target_screen_y + 10), 2)
 
 # 保存缓存数据
 def save_cache():
