@@ -5,6 +5,8 @@ from config import WIDTH, HEIGHT, TILE_SIZE, real_time_per_game_hour, MENU_WIDTH
 from player import move_player_towards_target
 from astar import astar
 from npc import generate_npcs, draw_npcs
+from inventory import Inventory
+from button import Button
 
 flash_counter = 0
 
@@ -36,7 +38,18 @@ path = []  # 存储路径
 noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
 npcs = generate_npcs(10, WIDTH // TILE_SIZE, x_offset, y_offset, noise_tile)
 
-def draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs):
+# 初始化物品栏
+inventory = Inventory(10)  # 设置物品栏容量为10
+inventory.add_item("Sword")
+inventory.add_item("Shield")
+
+# 物品栏显示状态
+show_inventory = False
+
+# 创建按钮
+button = Button(WIDTH - 120, 10, 100, 40, "Inventory")
+
+def draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs, inventory, show_inventory):
     draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE, x_offset, y_offset, flash_counter, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos)
     draw_npcs(screen, npcs, x_offset, y_offset, TILE_SIZE)
     
@@ -55,6 +68,13 @@ def draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, ma
     mouse_coord_text = coord_font.render(f'Mouse: {highlighted_tile}', True, (255, 255, 255))
     screen.blit(player_coord_text, (10, HEIGHT - 30))
     screen.blit(mouse_coord_text, (WIDTH - 200, HEIGHT - 30))
+    
+    # 绘制按钮
+    button.draw(screen)
+    
+    # 绘制物品栏
+    if show_inventory:
+        inventory.draw_inventory(screen, WIDTH - 300, 50, 280, HEIGHT - 100)
     
     # 如果菜单激活，绘制菜单
     if menu_active:
@@ -79,7 +99,10 @@ while running:
                 tile_y = mouse_y // TILE_SIZE + y_offset
                 highlighted_tile = (tile_x, tile_y)
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 3 and not menu_active:
+            if event.button == 1:  # 左键点击
+                if button.is_clicked(event.pos):  # 如果点击了按钮
+                    show_inventory = not show_inventory  # 切换物品栏显示状态
+            elif event.button == 3 and not menu_active:  # 右键点击且菜单未激活
                 mouse_x, mouse_y = event.pos
                 tile_x = mouse_x // TILE_SIZE + x_offset
                 tile_y = mouse_y // TILE_SIZE + y_offset
@@ -123,7 +146,7 @@ while running:
             target_pos = None
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
-    draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs)
+    draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs, inventory, show_inventory)
     
     clock.tick(30)
     flash_counter += 1
