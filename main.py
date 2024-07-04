@@ -111,11 +111,8 @@ while running:
         elapsed_time = current_time - last_time
         game_time += elapsed_time / real_time_per_game_hour
         last_time = current_time
-        if path:
-            next_step = path.pop(0)
-            player_pos = [next_step[0] + x_offset, next_step[1] + y_offset]
         
-        player_pos, target_pos, reached = move_player_towards_target(player_pos, target_pos, elapsed_time, move_speed)
+        player_pos, target_pos, path, reached = move_player_towards_target(player_pos, target_pos, elapsed_time, move_speed, path)
         if reached:
             target_pos = None
 
