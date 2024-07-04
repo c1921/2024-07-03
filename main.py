@@ -1,14 +1,15 @@
 import pygame
 import time
-from map import get_tile, draw_noise_map, highlighted_tile, clicked_tile, marked_tiles, save_cache, target_pos
+from map import get_tile, draw_noise_map, highlighted_tile, clicked_tile, marked_tiles, save_cache, target_pos, is_tile_passable, generate_passability_map
 from config import WIDTH, HEIGHT, TILE_SIZE, real_time_per_game_hour
 from player import move_player_towards_target
+from astar import astar
 
 flash_counter = 0
 
 # 玩家角色
 player_pos = [0, 0]  # 玩家角色的初始位置
-move_speed = 50  # 玩家每小时移动距离
+move_speed = 5  # 玩家每小时移动5个地块
 
 # 游戏时间
 game_time = 0  # 游戏时间，以小时为单位
@@ -27,6 +28,8 @@ running = True
 menu_active = False  # 标志菜单是否激活
 menu_rect = None  # 菜单矩形
 menu_options = []  # 菜单选项
+
+path = []  # 存储路径
 
 while running:
     for event in pygame.event.get():  # 处理事件队列中的所有事件
@@ -52,6 +55,9 @@ while running:
                     marked_tiles.append(menu_options[0])  # 标记地块
                 else:  # 如果点击在“Move”区域
                     target_pos = menu_options[0]  # 设置目标位置
+                    noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
+                    passability_map = generate_passability_map(noise_tile, WIDTH // TILE_SIZE)
+                    path = astar(passability_map, (int(player_pos[0] - x_offset), int(player_pos[1] - y_offset)), (int(target_pos[0] - x_offset), int(target_pos[1] - y_offset)))
                 menu_active = False  # 关闭菜单
             else:  # 如果点击在菜单外
                 menu_active = False  # 关闭菜单
@@ -75,7 +81,9 @@ while running:
         elapsed_time = current_time - last_time  # 计算自上次更新以来的时间
         game_time += elapsed_time / real_time_per_game_hour  # 更新游戏时间
         last_time = current_time  # 更新最后时间
-        player_pos, target_pos = move_player_towards_target(player_pos, target_pos, elapsed_time, move_speed)  # 移动玩家
+        if path:
+            next_step = path.pop(0)
+            player_pos = [next_step[0] + x_offset, next_step[1] + y_offset]
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)  # 获取当前视角的噪波地图
     draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE, x_offset, y_offset, flash_counter, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos)  # 绘制地图

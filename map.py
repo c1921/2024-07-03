@@ -45,14 +45,14 @@ def get_tile(x_offset, y_offset, tile_size):
         tile_cache[key] = noise_tile
         return noise_tile
 
-# 将噪波值映射到颜色
-def get_color(value):
+# 将噪波值映射到颜色并确定可通行性
+def get_color_and_passable(value):
     if value < -0.05:
-        return WATER_COLOR
+        return WATER_COLOR, False  # Water is not passable
     elif value < 0.0:
-        return SAND_COLOR
+        return SAND_COLOR, True  # Sand is passable
     else:
-        return GRASS_COLOR
+        return GRASS_COLOR, True  # Grass is passable
 
 def increase_brightness(color, factor=1.2):
     return tuple(min(int(c * factor), 255) for c in color)
@@ -62,7 +62,7 @@ def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset, flash_coun
         for y in range(tile_size):
             abs_x = x + x_offset
             abs_y = y + y_offset
-            color = get_color(noise_tile[x][y])
+            color, _ = get_color_and_passable(noise_tile[x][y])
             tile_rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
             if highlighted_tile == (abs_x, abs_y):
@@ -93,6 +93,24 @@ def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset, flash_coun
         target_screen_y = (target_pos[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
         pygame.draw.line(screen, (255, 0, 0), (target_screen_x - 10, target_screen_y), (target_screen_x + 10, target_screen_y), 2)
         pygame.draw.line(screen, (255, 0, 0), (target_screen_x, target_screen_y - 10), (target_screen_x, target_screen_y + 10), 2)
+
+# 检查地块是否可通行
+def is_tile_passable(x, y, noise_tile, tile_size, x_offset, y_offset):
+    if 0 <= x < tile_size and 0 <= y < tile_size:
+        value = noise_tile[x][y]
+        _, passable = get_color_and_passable(value)
+        return passable
+    return False
+
+# 生成表示地块可通行性的数组
+def generate_passability_map(noise_tile, tile_size):
+    passability_map = np.zeros((tile_size, tile_size), dtype=int)
+    for x in range(tile_size):
+        for y in range(tile_size):
+            _, passable = get_color_and_passable(noise_tile[x][y])
+            if not passable:
+                passability_map[x][y] = 1  # 不可通行地块标记为1
+    return passability_map
 
 # 保存缓存数据
 def save_cache():
