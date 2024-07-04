@@ -18,3 +18,6 @@ GRASS_COLOR = (128, 128, 128)
 
 # 缓存文件路径
 CACHE_FILE = "tile_cache.pkl"
+
+# 游戏时间参数
+real_time_per_game_hour = 30  # 每小时等于实际时间30秒
