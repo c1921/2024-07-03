@@ -14,7 +14,9 @@ def move_player_towards_target(player_pos, target_pos, elapsed_time, move_speed)
     返回:
     player_pos: list, 更新后的玩家角色坐标
     target_pos: list, 如果已到达目标位置，则为 None
+    reached: bool, 是否到达目标位置
     """
+    reached = False
     if target_pos:
         dx = target_pos[0] - player_pos[0]
         dy = target_pos[1] - player_pos[1]
@@ -23,8 +25,9 @@ def move_player_towards_target(player_pos, target_pos, elapsed_time, move_speed)
         if distance <= move_distance:
             player_pos = list(target_pos)
             target_pos = None
+            reached = True
         else:
             angle = np.arctan2(dy, dx)
             player_pos[0] += move_distance * np.cos(angle)
             player_pos[1] += move_distance * np.sin(angle)
-    return player_pos, target_pos
+    return player_pos, target_pos, reached

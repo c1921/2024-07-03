@@ -17,7 +17,6 @@ clicked_tile = None
 marked_tiles = []
 target_pos = None  # 玩家角色目标位置
 
-# 生成噪波地图数据
 def generate_noise_tile(x_offset, y_offset, tile_size):
     noise_tile = np.zeros((tile_size, tile_size))
     for x in range(tile_size):
@@ -35,7 +34,6 @@ def generate_noise_tile(x_offset, y_offset, tile_size):
             noise_tile[x][y] = noise_value
     return noise_tile
 
-# 获取地图块（带缓存）
 def get_tile(x_offset, y_offset, tile_size):
     key = (x_offset, y_offset)
     if key in tile_cache:
@@ -45,14 +43,13 @@ def get_tile(x_offset, y_offset, tile_size):
         tile_cache[key] = noise_tile
         return noise_tile
 
-# 将噪波值映射到颜色并确定可通行性
 def get_color_and_passable(value):
     if value < -0.05:
-        return WATER_COLOR, False  # Water is not passable
+        return WATER_COLOR, False
     elif value < 0.0:
-        return SAND_COLOR, True  # Sand is passable
+        return SAND_COLOR, True
     else:
-        return GRASS_COLOR, True  # Grass is passable
+        return GRASS_COLOR, True
 
 def increase_brightness(color, factor=1.2):
     return tuple(min(int(c * factor), 255) for c in color)
@@ -74,12 +71,10 @@ def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset, flash_coun
             
             pygame.draw.rect(screen, color, tile_rect)
 
-    # 绘制玩家角色
     player_screen_x = (player_pos[0] - x_offset) * TILE_SIZE + TILE_SIZE // 2
     player_screen_y = (player_pos[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
     pygame.draw.circle(screen, (139, 0, 0), (player_screen_x, player_screen_y), TILE_SIZE // 2)
 
-    # 绘制标记
     for mark in marked_tiles:
         mark_screen_x = (mark[0] - x_offset) * TILE_SIZE + TILE_SIZE // 2
         mark_screen_y = (mark[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
@@ -87,14 +82,12 @@ def draw_noise_map(screen, noise_tile, tile_size, x_offset, y_offset, flash_coun
                                                   (mark_screen_x - 10, mark_screen_y + 10), 
                                                   (mark_screen_x + 10, mark_screen_y + 10)])
 
-    # 绘制目标十字标志
     if target_pos:
         target_screen_x = (target_pos[0] - x_offset) * TILE_SIZE + TILE_SIZE // 2
         target_screen_y = (target_pos[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
         pygame.draw.line(screen, (255, 0, 0), (target_screen_x - 10, target_screen_y), (target_screen_x + 10, target_screen_y), 2)
         pygame.draw.line(screen, (255, 0, 0), (target_screen_x, target_screen_y - 10), (target_screen_x, target_screen_y + 10), 2)
 
-# 检查地块是否可通行
 def is_tile_passable(x, y, noise_tile, tile_size, x_offset, y_offset):
     if 0 <= x < tile_size and 0 <= y < tile_size:
         value = noise_tile[x][y]
@@ -102,17 +95,15 @@ def is_tile_passable(x, y, noise_tile, tile_size, x_offset, y_offset):
         return passable
     return False
 
-# 生成表示地块可通行性的数组
 def generate_passability_map(noise_tile, tile_size):
     passability_map = np.zeros((tile_size, tile_size), dtype=int)
     for x in range(tile_size):
         for y in range(tile_size):
             _, passable = get_color_and_passable(noise_tile[x][y])
             if not passable:
-                passability_map[x][y] = 1  # 不可通行地块标记为1
+                passability_map[x][y] = 1
     return passability_map
 
-# 保存缓存数据
 def save_cache():
     with open(CACHE_FILE, 'wb') as f:
         pickle.dump(tile_cache, f)
