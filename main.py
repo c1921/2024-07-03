@@ -4,6 +4,7 @@ from map import get_tile, draw_noise_map, highlighted_tile, clicked_tile, marked
 from config import WIDTH, HEIGHT, TILE_SIZE, real_time_per_game_hour, MENU_WIDTH, MENU_HEIGHT, MENU_OPTION_HEIGHT
 from player import move_player_towards_target
 from astar import astar
+from npc import generate_npcs, draw_npcs
 
 flash_counter = 0
 
@@ -31,8 +32,13 @@ menu_options = []  # 菜单选项
 
 path = []  # 存储路径
 
-def draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect):
+# 生成NPC
+noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
+npcs = generate_npcs(10, WIDTH // TILE_SIZE, x_offset, y_offset, noise_tile)
+
+def draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs):
     draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE, x_offset, y_offset, flash_counter, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos)
+    draw_npcs(screen, npcs, x_offset, y_offset, TILE_SIZE)
     
     # 绘制时间和暂停/继续状态
     font = pygame.font.Font(None, 36)
@@ -117,7 +123,7 @@ while running:
             target_pos = None
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
-    draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect)
+    draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs)
     
     clock.tick(30)
     flash_counter += 1
