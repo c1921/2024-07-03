@@ -36,5 +36,4 @@ def move_player_towards_target(player_pos, target_pos, elapsed_time, move_speed,
             angle = np.arctan2(dy, dx)
             player_pos[0] += move_distance * np.cos(angle)
             player_pos[1] += move_distance * np.sin(angle)
-    
     return player_pos, target_pos, path, reached

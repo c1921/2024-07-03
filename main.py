@@ -49,7 +49,7 @@ show_inventory = False
 # 创建按钮
 button = Button(WIDTH - 120, 10, 100, 40, "Inventory")
 
-def draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs, inventory, show_inventory):
+def draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs, inventory, show_inventory, path, x_offset, y_offset):
     draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE, x_offset, y_offset, flash_counter, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos)
     draw_npcs(screen, npcs, x_offset, y_offset, TILE_SIZE)
     
@@ -85,6 +85,12 @@ def draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, ma
         move_text = font.render('Move', True, (0, 0, 0))
         screen.blit(mark_text, (menu_rect.x + 10, menu_rect.y + 10))
         screen.blit(move_text, (menu_rect.x + 10, menu_rect.y + 40))
+    
+    # 绘制路径
+    for step in path:
+        step_x = (step[0] - x_offset) * TILE_SIZE + TILE_SIZE // 2
+        step_y = (step[1] - y_offset) * TILE_SIZE + TILE_SIZE // 2
+        pygame.draw.circle(screen, (255, 0, 0), (step_x, step_y), 5)
 
     pygame.display.flip()
 
@@ -102,6 +108,22 @@ while running:
             if event.button == 1:  # 左键点击
                 if button.is_clicked(event.pos):  # 如果点击了按钮
                     show_inventory = not show_inventory  # 切换物品栏显示状态
+                elif menu_active and menu_rect.collidepoint(event.pos):  # 如果菜单激活且点击在菜单内
+                    mouse_x, mouse_y = event.pos
+                    if mouse_y < menu_rect.y + MENU_OPTION_HEIGHT:  # 如果点击在“Mark”区域
+                        marked_tiles.append(menu_options[0])  # 标记地块
+                    else:  # 如果点击在“Move”区域
+                        target_pos = menu_options[0]  # 设置目标位置
+                        noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
+                        passability_map = generate_passability_map(noise_tile, WIDTH // TILE_SIZE)
+                        start_pos = (int(player_pos[0]), int(player_pos[1]))
+                        end_pos = (int(target_pos[0]), int(target_pos[1]))
+                        print(f"Start: {start_pos}, End: {end_pos}")  # 调试信息
+                        path = astar(passability_map, start_pos, end_pos)
+                        print(f"Path: {path}")  # 调试信息
+                    menu_active = False  # 关闭菜单
+                else:
+                    menu_active = False  # 如果点击在菜单外，关闭菜单
             elif event.button == 3 and not menu_active:  # 右键点击且菜单未激活
                 mouse_x, mouse_y = event.pos
                 tile_x = mouse_x // TILE_SIZE + x_offset
@@ -109,18 +131,6 @@ while running:
                 menu_rect = pygame.Rect(mouse_x, mouse_y, MENU_WIDTH, MENU_HEIGHT)
                 menu_options = [(tile_x, tile_y)]
                 menu_active = True
-            elif menu_active and menu_rect.collidepoint(event.pos):
-                mouse_x, mouse_y = event.pos
-                if mouse_y < menu_rect.y + MENU_OPTION_HEIGHT:
-                    marked_tiles.append(menu_options[0])
-                else:
-                    target_pos = menu_options[0]
-                    noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
-                    passability_map = generate_passability_map(noise_tile, WIDTH // TILE_SIZE)
-                    path = astar(passability_map, (int(player_pos[0] - x_offset), int(player_pos[1] - y_offset)), (int(target_pos[0] - x_offset), int(target_pos[1] - y_offset)))
-                menu_active = False
-            else:
-                menu_active = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 paused = not paused
@@ -146,7 +156,7 @@ while running:
             target_pos = None
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
-    draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs, inventory, show_inventory)
+    draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect, npcs, inventory, show_inventory, path, x_offset, y_offset)
     
     clock.tick(30)
     flash_counter += 1
