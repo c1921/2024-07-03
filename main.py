@@ -2,14 +2,14 @@ import pygame
 import time
 from map import get_tile, draw_noise_map, highlighted_tile, clicked_tile, marked_tiles, save_cache, target_pos, is_tile_passable, generate_passability_map
 from config import WIDTH, HEIGHT, TILE_SIZE, real_time_per_game_hour, MENU_WIDTH, MENU_HEIGHT, MENU_OPTION_HEIGHT
-from player import move_player_towards_target
 from astar import astar
 
 flash_counter = 0
 
 # 玩家角色
 player_pos = [0, 0]  # 玩家角色的初始位置
-move_speed = 5  # 玩家每小时移动5个地块
+move_speed = 0.5  # 每秒移动2个tile
+move_timer = 0  # 用于跟踪时间
 
 # 游戏时间
 game_time = 0  # 游戏时间，以小时为单位
@@ -111,13 +111,15 @@ while running:
         elapsed_time = current_time - last_time
         game_time += elapsed_time / real_time_per_game_hour
         last_time = current_time
-        if path:
+        
+        # 更新移动计时器
+        move_timer += elapsed_time
+        
+        # 根据移动速度控制玩家的移动
+        if path and move_timer >= 1 / move_speed:
             next_step = path.pop(0)
             player_pos = [next_step[0] + x_offset, next_step[1] + y_offset]
-        
-        player_pos, target_pos, reached = move_player_towards_target(player_pos, target_pos, elapsed_time, move_speed)
-        if reached:
-            target_pos = None
+            move_timer = 0  # 重置移动计时器
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
     draw_game(screen, noise_tile, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos, flash_counter, game_time, paused, menu_active, menu_rect)
