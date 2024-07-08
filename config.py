@@ -21,8 +21,3 @@ CACHE_FILE = "tile_cache.pkl"
 
 # 游戏时间参数
 real_time_per_game_hour = 30  # 每小时等于实际时间30秒
-
-# 菜单参数
-MENU_WIDTH = 100
-MENU_HEIGHT = 60
-MENU_OPTION_HEIGHT = 30
