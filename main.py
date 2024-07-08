@@ -28,6 +28,7 @@ menu_rect = None
 menu_options = []
 
 path = []
+move_speed = 100  # 玩家移动速度，单位为像素/秒
 
 def handle_events():
     global running, menu_active, menu_rect, menu_options, paused, highlighted_tile, target_pos, path, x_offset, y_offset, player_pos
@@ -68,7 +69,7 @@ def handle_mouse_button_down(event):
             target_pos = menu_options[0]
             noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
             passability_map = generate_passability_map(noise_tile, WIDTH // TILE_SIZE)
-            path = astar(passability_map, (int(player_pos[0] - x_offset), int(player_pos[1] - y_offset)), (int(target_pos[0] - x_offset), (int(target_pos[1] - y_offset))))
+            path = astar(passability_map, (int(player_pos[0] - x_offset), int(player_pos[1] - y_offset)), (int(target_pos[0] - x_offset), int(target_pos[1] - y_offset)))
         menu_active = False
     else:
         menu_active = False
@@ -90,16 +91,27 @@ def handle_key_presses():
     if keys[pygame.K_d]:
         x_offset += 1
 
-def update_game_time():
-    global game_time, last_time, path, player_pos
+def update_game_time(delta_time):
+    global game_time, last_time, path, player_pos, move_speed
     if not paused:
-        current_time = time.time()
-        elapsed_time = current_time - last_time
-        game_time += elapsed_time / real_time_per_game_hour
-        last_time = current_time
+        game_time += delta_time / real_time_per_game_hour
         if path:
-            next_step = path.pop(0)
+            move_player_along_path(delta_time)
+
+def move_player_along_path(delta_time):
+    global player_pos, path, move_speed, x_offset, y_offset
+    if path:
+        next_step = path[0]
+        step_vector = [next_step[0] - player_pos[0] + x_offset, next_step[1] - player_pos[1] + y_offset]
+        step_distance = (step_vector[0] ** 2 + step_vector[1] ** 2) ** 0.5
+        max_distance = move_speed * delta_time
+
+        if step_distance <= max_distance:
+            path.pop(0)
             player_pos = [next_step[0] + x_offset, next_step[1] + y_offset]
+        else:
+            player_pos[0] += step_vector[0] / step_distance * max_distance
+            player_pos[1] += step_vector[1] / step_distance * max_distance
 
 def draw_ui():
     font = pygame.font.Font(None, 36)
@@ -127,9 +139,11 @@ def draw_menu():
         screen.blit(move_text, (menu_rect.x + 10, menu_rect.y + 40))
 
 while running:
+    delta_time = clock.tick(30) / 1000.0  # 获取每帧的时间间隔，单位为秒
+    
     handle_events()
     handle_key_presses()
-    update_game_time()
+    update_game_time(delta_time)
 
     noise_tile = get_tile(x_offset, y_offset, WIDTH // TILE_SIZE)
     draw_noise_map(screen, noise_tile, WIDTH // TILE_SIZE, x_offset, y_offset, flash_counter, player_pos, highlighted_tile, clicked_tile, marked_tiles, target_pos)
@@ -138,7 +152,6 @@ while running:
     draw_menu()
 
     pygame.display.flip()
-    clock.tick(30)
     flash_counter += 1
 
 save_cache()
